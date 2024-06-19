@@ -1,4 +1,5 @@
 import SignaturePad from '../src/signature_pad';
+import type { Options } from '../src/signature_pad';
 import { face } from './fixtures/face';
 import { square } from './fixtures/square';
 import './utils/pointer-event-polyfill';
@@ -36,6 +37,51 @@ describe('#constructor', () => {
     const pad = new SignaturePad(canvas, { minDistance: 0 });
 
     expect(pad.minDistance).toBe(0);
+  });
+
+  it("uses fallback values for options with explicit 'undefined'", () => {
+    const opts: Options = {
+      dotSize: undefined,
+      minWidth: undefined,
+      maxWidth: undefined,
+      penColor: undefined,
+      velocityFilterWeight: undefined,
+      compositeOperation: undefined,
+      minDistance: undefined,
+      backgroundColor: undefined,
+      throttle: undefined,
+      canvasContextOptions: undefined,
+    };
+
+    const exp: Options = {
+      dotSize: 0,
+      minWidth: 0.5,
+      maxWidth: 2.5,
+      penColor: 'black',
+      velocityFilterWeight: 0.7,
+      compositeOperation: 'source-over',
+      minDistance: 5,
+      backgroundColor: 'rgba(0,0,0,0)',
+      throttle: 16,
+      canvasContextOptions: {},
+    };
+
+    const pad = new SignaturePad(canvas, opts);
+
+    const actual = {
+      dotSize: pad.dotSize,
+      minWidth: pad.minWidth,
+      maxWidth: pad.maxWidth,
+      penColor: pad.penColor,
+      velocityFilterWeight: pad.velocityFilterWeight,
+      compositeOperation: pad.compositeOperation,
+      minDistance: pad.minDistance,
+      backgroundColor: pad.backgroundColor,
+      throttle: pad.throttle,
+      canvasContextOptions: pad.canvasContextOptions,
+    };
+
+    expect(actual).toStrictEqual(exp);
   });
 });
 
@@ -224,6 +270,14 @@ describe('user interactions', () => {
         clientX: 50,
         clientY: 30,
         pressure: 1,
+        buttons: 1,
+      }),
+    );
+    window.dispatchEvent(
+      new PointerEvent('pointerup', {
+        clientX: 50,
+        clientY: 30,
+        pressure: 1,
       }),
     );
     canvas.dispatchEvent(
@@ -231,10 +285,26 @@ describe('user interactions', () => {
         clientX: 240,
         clientY: 30,
         pressure: 1,
+        buttons: 1,
+      }),
+    );
+    window.dispatchEvent(
+      new PointerEvent('pointerup', {
+        clientX: 240,
+        clientY: 30,
+        pressure: 1,
       }),
     );
     canvas.dispatchEvent(
       new PointerEvent('pointerdown', {
+        clientX: 150,
+        clientY: 120,
+        pressure: 1,
+        buttons: 1,
+      }),
+    );
+    window.dispatchEvent(
+      new PointerEvent('pointerup', {
         clientX: 150,
         clientY: 120,
         pressure: 1,
@@ -252,16 +322,18 @@ describe('user interactions', () => {
         clientX: 50,
         clientY: 30,
         pressure: 1,
+        buttons: 1,
       }),
     );
-    canvas.dispatchEvent(
+    window.dispatchEvent(
       new PointerEvent('pointermove', {
         clientX: 240,
         clientY: 30,
         pressure: 1,
+        buttons: 1,
       }),
     );
-    document.dispatchEvent(
+    window.dispatchEvent(
       new PointerEvent('pointerup', {
         clientX: 150,
         clientY: 120,
@@ -290,6 +362,7 @@ describe('user interactions', () => {
         clientX: 50,
         clientY: 30,
         pressure: 1,
+        buttons: 1,
       }),
     );
     externalCanvas.dispatchEvent(
@@ -297,10 +370,11 @@ describe('user interactions', () => {
         clientX: 240,
         clientY: 30,
         pressure: 1,
+        buttons: 1,
       }),
     );
     // check that original document is not affected
-    document.dispatchEvent(
+    window.dispatchEvent(
       new PointerEvent('pointerup', {
         clientX: 150,
         clientY: 120,
@@ -337,7 +411,8 @@ describe(`touch events.`, () => {
     });
     const touchMoveEvent = new TouchEvent('touchmove', {
       cancelable,
-      targetTouches: [
+      targetTouches: [{} as Touch],
+      changedTouches: [
         {
           clientX: 55,
           clientY: 35,
@@ -376,8 +451,8 @@ describe(`touch events.`, () => {
     const { touchStartEvent, touchMoveEvent, touchEndEvent } =
       createTouchEvents(false);
     canvas.dispatchEvent(touchStartEvent);
-    canvas.dispatchEvent(touchMoveEvent);
-    canvas.dispatchEvent(touchEndEvent);
+    window.dispatchEvent(touchMoveEvent);
+    window.dispatchEvent(touchEndEvent);
 
     expect(touchStartEvent.preventDefault).not.toHaveBeenCalled();
     expect(touchMoveEvent.preventDefault).not.toHaveBeenCalled();
@@ -388,8 +463,8 @@ describe(`touch events.`, () => {
     const { touchStartEvent, touchMoveEvent, touchEndEvent } =
       createTouchEvents(true);
     canvas.dispatchEvent(touchStartEvent);
-    canvas.dispatchEvent(touchMoveEvent);
-    canvas.dispatchEvent(touchEndEvent);
+    window.dispatchEvent(touchMoveEvent);
+    window.dispatchEvent(touchEndEvent);
 
     expect(touchStartEvent.preventDefault).toHaveBeenCalled();
     expect(touchMoveEvent.preventDefault).toHaveBeenCalled();
@@ -428,6 +503,16 @@ describe('Signature events.', () => {
     },
   ].forEach((param) => {
     describe(`${param.eventName}.`, () => {
+      function createPointerEvent(dispatchedEventName: string) {
+        return new PointerEvent(dispatchedEventName, {
+          clientX: 50,
+          clientY: 30,
+          pressure: 1,
+          buttons: dispatchedEventName == 'pointerup' ? 0 : 1,
+          bubbles: true,
+        });
+      }
+
       beforeEach(() => {
         signpad.addEventListener(param.eventName, eventHandler);
       });
@@ -441,15 +526,9 @@ describe('Signature events.', () => {
       });
 
       it('writes to the canvas.', () => {
-        const eventInitObj = <PointerEventInit>{
-          clientX: 50,
-          clientY: 30,
-          pressure: 1,
-          bubbles: true,
-        };
         let pointerEvent;
         for (const dispatchedEventName of param.dispatchedEventName) {
-          pointerEvent = new PointerEvent(dispatchedEventName, eventInitObj);
+          pointerEvent = createPointerEvent(dispatchedEventName);
           canvas.dispatchEvent(pointerEvent);
         }
 
@@ -457,7 +536,7 @@ describe('Signature events.', () => {
         expect(eventDispatched).toBeInstanceOf(CustomEvent);
 
         const event = <CustomEvent>eventDispatched;
-        expect(event.detail).toBe(pointerEvent);
+        expect(event.detail.event).toBe(pointerEvent);
       });
     });
   });
@@ -478,6 +557,7 @@ describe('Signature events.', () => {
         clientX: 50,
         clientY: 30,
         pressure: 1,
+        buttons: 1,
       };
       const pointerEvent = new PointerEvent('pointerdown', eventInitObj);
       canvas.dispatchEvent(pointerEvent);
@@ -486,7 +566,7 @@ describe('Signature events.', () => {
       expect(eventDispatched).toBeInstanceOf(CustomEvent);
 
       const event = <CustomEvent>eventDispatched;
-      expect(event.detail).toBe(pointerEvent);
+      expect(event.detail.event).toBe(pointerEvent);
     });
   });
 
@@ -504,6 +584,7 @@ describe('Signature events.', () => {
         clientX: 50,
         clientY: 30,
         pressure: 1,
+        buttons: 1,
       }),
     );
     canvas.dispatchEvent(
@@ -511,9 +592,10 @@ describe('Signature events.', () => {
         clientX: 50,
         clientY: 40,
         pressure: 1,
+        buttons: 1,
       }),
     );
-    document.dispatchEvent(
+    window.dispatchEvent(
       new PointerEvent('pointerup', {
         clientX: 50,
         clientY: 40,

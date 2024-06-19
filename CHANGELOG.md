@@ -1,3 +1,54 @@
+## [5.0.2](https://github.com/szimek/signature_pad/compare/v5.0.1...v5.0.2) (2024-06-10)
+
+
+### Bug Fixes
+
+* cast type instead of global namespace ([#773](https://github.com/szimek/signature_pad/issues/773)) ([caf901b](https://github.com/szimek/signature_pad/commit/caf901be958f2b1bd42168e157ee072111a50a99))
+
+## [5.0.1](https://github.com/szimek/signature_pad/compare/v5.0.0...v5.0.1) (2024-05-18)
+
+
+### Bug Fixes
+
+* Use fallback values when options object contains explicit `undefined` values ([#772](https://github.com/szimek/signature_pad/issues/772)) ([fe11e16](https://github.com/szimek/signature_pad/commit/fe11e1623901b45005f7135a68f98cd3dd39cd24))
+
+# [5.0.0](https://github.com/szimek/signature_pad/compare/v4.2.0...v5.0.0) (2024-05-03)
+
+
+### Bug Fixes
+
+* allow drawing outside canvas for a smoother signature ([#765](https://github.com/szimek/signature_pad/issues/765)) ([29a8b5a](https://github.com/szimek/signature_pad/commit/29a8b5a2a19387782c3eec1055389011eb7f9699))
+* update deps ([1955364](https://github.com/szimek/signature_pad/commit/19553647cfcc8f07578e25f04e3897fad6116411))
+
+
+### BREAKING CHANGES
+
+* - Drawing outside of the canvas will record data outside the canvas
+- Update SignatureEvent to store the original event, x, y, pressure
+- move and up events are attached once down is triggered and they are on the window/ownerDocument target
+
+# [5.0.0-beta.1](https://github.com/szimek/signature_pad/compare/v4.2.0...v5.0.0-beta.1) (2024-04-05)
+
+
+### Bug Fixes
+
+* allow drawing outside canvas for a smoother signature ([#765](https://github.com/szimek/signature_pad/issues/765)) ([29a8b5a](https://github.com/szimek/signature_pad/commit/29a8b5a2a19387782c3eec1055389011eb7f9699))
+
+
+### BREAKING CHANGES
+
+* Drawing outside of the canvas will record data outside the canvas
+* Update SignatureEvent to store the original event, x, y, pressure
+* move and up events are attached once down is triggered and they are on the window/ownerDocument target
+
+#### v4:
+
+![sig1](https://user-images.githubusercontent.com/97994/221343969-1d8b0353-1e03-4205-9904-9587974cf11e.gif)
+
+#### v5
+
+![sig2](https://github.com/szimek/signature_pad/assets/97994/b9f1cfc2-aef5-4320-b97c-9fbb5cfe98ed)
+
 # [4.2.0](https://github.com/szimek/signature_pad/compare/v4.1.7...v4.2.0) (2024-03-10)
 
 
