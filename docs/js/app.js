@@ -1,4 +1,5 @@
 const wrapper = document.getElementById("signature-pad");
+const canvasWrapper = document.getElementById("canvas-wrapper");
 const clearButton = wrapper.querySelector("[data-action=clear]");
 const changeBackgroundColorButton = wrapper.querySelector("[data-action=change-background-color]");
 const changeColorButton = wrapper.querySelector("[data-action=change-color]");
@@ -9,6 +10,7 @@ const savePNGButton = wrapper.querySelector("[data-action=save-png]");
 const saveJPGButton = wrapper.querySelector("[data-action=save-jpg]");
 const saveSVGButton = wrapper.querySelector("[data-action=save-svg]");
 const saveSVGWithBackgroundButton = wrapper.querySelector("[data-action=save-svg-with-background]");
+const openInWindowButton = wrapper.querySelector("[data-action=open-in-window]");
 let undoData = [];
 const canvas = wrapper.querySelector("canvas");
 const signaturePad = new SignaturePad(canvas, {
@@ -16,6 +18,13 @@ const signaturePad = new SignaturePad(canvas, {
   // this option can be omitted if only saving as PNG or SVG
   backgroundColor: 'rgb(255, 255, 255)'
 });
+
+function randomColor() {
+  const r = Math.round(Math.random() * 255);
+  const g = Math.round(Math.random() * 255);
+  const b = Math.round(Math.random() * 255);
+  return `rgb(${r},${g},${b})`;
+}
 
 // Adjust canvas coordinate space taking into account pixel ratio,
 // to make it look crisp on mobile devices.
@@ -39,7 +48,7 @@ function resizeCanvas() {
   //signaturePad.clear();
 
   // If you want to keep the drawing on resize instead of clearing it you can reset the data.
-  signaturePad.fromData(signaturePad.toData());
+  signaturePad.redraw();
 }
 
 // On mobile devices it might make more sense to listen to orientation change,
@@ -106,7 +115,7 @@ undoButton.addEventListener("click", () => {
     // remove the last dot or line
     const removed = data.pop();
     undoData.push(removed);
-    signaturePad.fromData(data);
+    signaturePad.redraw();
   }
 });
 
@@ -114,29 +123,17 @@ redoButton.addEventListener("click", () => {
   if (undoData.length > 0) {
     const data = signaturePad.toData();
     data.push(undoData.pop());
-    signaturePad.fromData(data);
+    signaturePad.redraw();
   }
 });
 
 changeBackgroundColorButton.addEventListener("click", () => {
-  const r = Math.round(Math.random() * 255);
-  const g = Math.round(Math.random() * 255);
-  const b = Math.round(Math.random() * 255);
-  const color = "rgb(" + r + "," + g + "," + b + ")";
-
-  signaturePad.backgroundColor = color;
-  const data = signaturePad.toData();
-  signaturePad.clear();
-  signaturePad.fromData(data);
+  signaturePad.backgroundColor = randomColor();
+  signaturePad.redraw();
 });
 
 changeColorButton.addEventListener("click", () => {
-  const r = Math.round(Math.random() * 255);
-  const g = Math.round(Math.random() * 255);
-  const b = Math.round(Math.random() * 255);
-  const color = "rgb(" + r + "," + g + "," + b + ")";
-
-  signaturePad.penColor = color;
+  signaturePad.penColor = randomColor();
 });
 
 changeWidthButton.addEventListener("click", () => {
@@ -178,7 +175,24 @@ saveSVGWithBackgroundButton.addEventListener("click", () => {
   if (signaturePad.isEmpty()) {
     alert("Please provide a signature first.");
   } else {
-    const dataURL = signaturePad.toDataURL('image/svg+xml', { includeBackgroundColor: true });
+    const dataURL = signaturePad.toDataURL('image/svg+xml', { includeBackgroundColor: true, includeDataUrl: true });
     download(dataURL, "signature.svg");
   }
 });
+
+openInWindowButton.addEventListener("click", () => {
+	var externalWin = window.open('', '', `width=${canvas.width / window.devicePixelRatio},height=${canvas.height / window.devicePixelRatio}`);
+  canvas.style.width = "100%";
+  canvas.style.height = "100%";
+  externalWin.onresize = resizeCanvas;
+  externalWin.document.body.style.margin = '0';
+	externalWin.document.body.appendChild(canvas);
+  canvasWrapper.classList.add("empty");
+  externalWin.onbeforeunload = () => {
+    canvas.style.width = "";
+    canvas.style.height = "";
+    canvasWrapper.classList.remove("empty");
+    canvasWrapper.appendChild(canvas);
+    resizeCanvas();
+  };
+})

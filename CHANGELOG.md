@@ -1,3 +1,154 @@
+## [5.1.4](https://github.com/szimek/signature_pad/compare/v5.1.3...v5.1.4) (2026-07-31)
+
+
+### Bug Fixes
+
+* render two-point point groups ([#890](https://github.com/szimek/signature_pad/issues/890)) ([b787bee](https://github.com/szimek/signature_pad/commit/b787beec5b6c1484cc1657d4370339b5f426aedd))
+
+## [5.1.3](https://github.com/szimek/signature_pad/compare/v5.1.2...v5.1.3) (2025-12-03)
+
+
+### Bug Fixes
+
+* disable user selection on Safari to match expected behavior of all other browsers ([#856](https://github.com/szimek/signature_pad/issues/856)) ([5014167](https://github.com/szimek/signature_pad/commit/501416754cc27855d512124bec5c217bf894ea0e))
+
+## [5.1.2](https://github.com/szimek/signature_pad/compare/v5.1.1...v5.1.2) (2025-11-16)
+
+
+### Bug Fixes
+
+* handle pointercancel/touchcancel to end stroke correctly ([#853](https://github.com/szimek/signature_pad/issues/853)) ([876ef9d](https://github.com/szimek/signature_pad/commit/876ef9da722d36fa9c1a3547422392aa089f0662))
+
+## [5.1.1](https://github.com/szimek/signature_pad/compare/v5.1.0...v5.1.1) (2025-09-16)
+
+
+### Bug Fixes
+
+* add .js extensions to relative imports ([#844](https://github.com/szimek/signature_pad/issues/844)) ([6732640](https://github.com/szimek/signature_pad/commit/6732640431b43df683de0c291831e636efdea0e4)), closes [#843](https://github.com/szimek/signature_pad/issues/843) [#843](https://github.com/szimek/signature_pad/issues/843) [#843](https://github.com/szimek/signature_pad/issues/843)
+
+# [5.1.0](https://github.com/szimek/signature_pad/compare/v5.0.10...v5.1.0) (2025-09-03)
+
+
+### Bug Fixes
+
+* update deps ([da7dd1a](https://github.com/szimek/signature_pad/commit/da7dd1a573bda6fa1646696ceda20cc01d1f815b))
+
+
+### Features
+
+* add includeDataUrl svg option ([ec971d6](https://github.com/szimek/signature_pad/commit/ec971d61ceb12d5d06190078059680274aa52282))
+* add redraw method ([2ac4ef4](https://github.com/szimek/signature_pad/commit/2ac4ef42f9c67918cd80176473d95c0716719c2e))
+
+## [5.0.10](https://github.com/szimek/signature_pad/compare/v5.0.9...v5.0.10) (2025-06-20)
+
+
+### Bug Fixes
+
+* remove isPrimary check ([#836](https://github.com/szimek/signature_pad/issues/836)) ([d4e6f34](https://github.com/szimek/signature_pad/commit/d4e6f3413bc407b2715292d582f38848c1d5e202))
+* reset pointerId on stroke end and clear ([#835](https://github.com/szimek/signature_pad/issues/835)) ([8d80d97](https://github.com/szimek/signature_pad/commit/8d80d97e5da80febdf604eb8aa594e5629df6d0f))
+
+## [5.0.9](https://github.com/szimek/signature_pad/compare/v5.0.8...v5.0.9) (2025-06-05)
+
+
+### Bug Fixes
+
+* check pointerId to prevent multiple pointers ([#830](https://github.com/szimek/signature_pad/issues/830)) ([f6a602b](https://github.com/szimek/signature_pad/commit/f6a602b59ad7865be11fdf5af908fd7dc8c09451))
+* update deps ([#831](https://github.com/szimek/signature_pad/issues/831)) ([0dae18c](https://github.com/szimek/signature_pad/commit/0dae18c9405c5a00b58843fafa6bdbfe37d93bd3))
+
+## [5.0.8](https://github.com/szimek/signature_pad/compare/v5.0.7...v5.0.8) (2025-06-05)
+
+
+### Bug Fixes
+
+* explicitly set passive: false on listeners ([#829](https://github.com/szimek/signature_pad/issues/829)) ([d28a170](https://github.com/szimek/signature_pad/commit/d28a1707fb6d4416cc4bafbe5793fce82cb60e68))
+
+## [5.0.7](https://github.com/szimek/signature_pad/compare/v5.0.6...v5.0.7) (2025-03-19)
+
+
+### Bug Fixes
+
+* export BasicPoint type ([#820](https://github.com/szimek/signature_pad/issues/820)) ([8732c65](https://github.com/szimek/signature_pad/commit/8732c6526e22e0d3ab372c2be59a2768a9106c79))
+
+## [5.0.6](https://github.com/szimek/signature_pad/compare/v5.0.5...v5.0.6) (2025-03-14)
+
+
+### Bug Fixes
+
+* add "types" to "exports" in package.json ([#817](https://github.com/szimek/signature_pad/issues/817)) ([5623be7](https://github.com/szimek/signature_pad/commit/5623be7242b63ba486a1deb2781ed51bab865baa))
+
+## [5.0.5](https://github.com/szimek/signature_pad/compare/v5.0.4...v5.0.5) (2025-03-14)
+
+
+### Bug Fixes
+
+* Add conditional exports to package.json ([#815](https://github.com/szimek/signature_pad/issues/815)) ([005a090](https://github.com/szimek/signature_pad/commit/005a090ef3c37e7bb9adbf7ad5ace57846f4548b))
+
+## [5.0.4](https://github.com/szimek/signature_pad/compare/v5.0.3...v5.0.4) (2024-10-17)
+
+
+### Bug Fixes
+
+* prevent non-primary for pointer events ([#796](https://github.com/szimek/signature_pad/issues/796)) ([956450c](https://github.com/szimek/signature_pad/commit/956450cae2b8706db96fe8ba10dae85f5c82979b))
+* update deps ([#797](https://github.com/szimek/signature_pad/issues/797)) ([6191456](https://github.com/szimek/signature_pad/commit/61914563af5f223177b0d8cd215bab56a5b59ed5))
+
+## [5.0.3](https://github.com/szimek/signature_pad/compare/v5.0.2...v5.0.3) (2024-08-23)
+
+
+### Bug Fixes
+
+* prevent division by zero in bezier ([#785](https://github.com/szimek/signature_pad/issues/785)) ([1ca425e](https://github.com/szimek/signature_pad/commit/1ca425eed94a72f4e679df03db1785f4e2147d08))
+
+## [5.0.2](https://github.com/szimek/signature_pad/compare/v5.0.1...v5.0.2) (2024-06-10)
+
+
+### Bug Fixes
+
+* cast type instead of global namespace ([#773](https://github.com/szimek/signature_pad/issues/773)) ([caf901b](https://github.com/szimek/signature_pad/commit/caf901be958f2b1bd42168e157ee072111a50a99))
+
+## [5.0.1](https://github.com/szimek/signature_pad/compare/v5.0.0...v5.0.1) (2024-05-18)
+
+
+### Bug Fixes
+
+* Use fallback values when options object contains explicit `undefined` values ([#772](https://github.com/szimek/signature_pad/issues/772)) ([fe11e16](https://github.com/szimek/signature_pad/commit/fe11e1623901b45005f7135a68f98cd3dd39cd24))
+
+# [5.0.0](https://github.com/szimek/signature_pad/compare/v4.2.0...v5.0.0) (2024-05-03)
+
+
+### Bug Fixes
+
+* allow drawing outside canvas for a smoother signature ([#765](https://github.com/szimek/signature_pad/issues/765)) ([29a8b5a](https://github.com/szimek/signature_pad/commit/29a8b5a2a19387782c3eec1055389011eb7f9699))
+* update deps ([1955364](https://github.com/szimek/signature_pad/commit/19553647cfcc8f07578e25f04e3897fad6116411))
+
+
+### BREAKING CHANGES
+
+* - Drawing outside of the canvas will record data outside the canvas
+- Update SignatureEvent to store the original event, x, y, pressure
+- move and up events are attached once down is triggered and they are on the window/ownerDocument target
+
+# [5.0.0-beta.1](https://github.com/szimek/signature_pad/compare/v4.2.0...v5.0.0-beta.1) (2024-04-05)
+
+
+### Bug Fixes
+
+* allow drawing outside canvas for a smoother signature ([#765](https://github.com/szimek/signature_pad/issues/765)) ([29a8b5a](https://github.com/szimek/signature_pad/commit/29a8b5a2a19387782c3eec1055389011eb7f9699))
+
+
+### BREAKING CHANGES
+
+* Drawing outside of the canvas will record data outside the canvas
+* Update SignatureEvent to store the original event, x, y, pressure
+* move and up events are attached once down is triggered and they are on the window/ownerDocument target
+
+#### v4:
+
+![sig1](https://user-images.githubusercontent.com/97994/221343969-1d8b0353-1e03-4205-9904-9587974cf11e.gif)
+
+#### v5
+
+![sig2](https://github.com/szimek/signature_pad/assets/97994/b9f1cfc2-aef5-4320-b97c-9fbb5cfe98ed)
+
 # [4.2.0](https://github.com/szimek/signature_pad/compare/v4.1.7...v4.2.0) (2024-03-10)
 
 

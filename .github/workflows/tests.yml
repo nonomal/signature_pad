@@ -1,12 +1,15 @@
-name: "tests"
+name: 'tests'
 on:
   pull_request:
   push:
     branches:
       - master
+      - beta
+
+permissions:
+  contents: read
 
 jobs:
-
   Test:
     runs-on: ubuntu-latest
     strategy:
@@ -56,9 +59,14 @@ jobs:
         run: yarn run lint
 
   Release:
+    permissions:
+      contents: write # to be able to publish a GitHub release
+      issues: write # to be able to comment on released issues
+      pull-requests: write # to be able to comment on released pull requests
+      id-token: write # to enable use of OIDC for trusted publishing and npm provenance
     needs: [Test, Build, Lint]
     if: |
-      github.ref == 'refs/heads/master' &&
+      (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/beta') &&
       github.event.repository.fork == false
     runs-on: ubuntu-latest
     steps:
@@ -74,7 +82,6 @@ jobs:
       - name: Build 🗜️
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           export SEMANTIC_RELEASE_NEXT_VERSION=$(npx semantic-release --no-ci --dry-run | grep -oP 'The next release version is \K[0-9]+\.[0-9]+\.[0-9]+')
           echo "Next Version: $SEMANTIC_RELEASE_NEXT_VERSION"
@@ -89,5 +96,4 @@ jobs:
       - name: Release 🎉
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npx semantic-release

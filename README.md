@@ -1,4 +1,4 @@
-# Signature Pad [![npm](https://badge.fury.io/js/signature_pad.svg)](https://www.npmjs.com/package/signature_pad) [![tests](https://github.com/szimek/signature_pad/actions/workflows/test.yml/badge.svg)](https://github.com/szimek/signature_pad/actions/workflows/test.yml) [![Code Climate](https://codeclimate.com/github/szimek/signature_pad.png)](https://codeclimate.com/github/szimek/signature_pad) [![](https://data.jsdelivr.com/v1/package/npm/signature_pad/badge?style=rounded)](https://www.jsdelivr.com/package/npm/signature_pad)
+# Signature Pad [![npm](https://badge.fury.io/js/signature_pad.svg)](https://www.npmjs.com/package/signature_pad) [![tests](https://github.com/szimek/signature_pad/actions/workflows/tests.yml/badge.svg)](https://github.com/szimek/signature_pad/actions/workflows/tests.yml) [![](https://data.jsdelivr.com/v1/package/npm/signature_pad/badge?style=rounded)](https://www.jsdelivr.com/package/npm/signature_pad)
 
 Signature Pad is a JavaScript library for drawing smooth signatures. It's HTML5 canvas based and uses variable width Bézier curve interpolation based on [Smoother Signatures](https://developer.squareup.com/blog/smoother-signatures/) post by [Square](https://squareup.com).
 It works in all modern desktop and mobile browsers and doesn't depend on any external libraries.
@@ -7,7 +7,7 @@ It works in all modern desktop and mobile browsers and doesn't depend on any ext
 
 ## Demo
 
-[Demo](http://szimek.github.io/signature_pad) works in desktop and mobile browsers. You can check out its [source code](https://github.com/szimek/signature_pad/blob/gh-pages/js/app.js) for some tips on how to handle window resize and high DPI screens. You can also find more about the latter in [HTML5 Rocks tutorial](http://www.html5rocks.com/en/tutorials/canvas/hidpi).
+[Demo](http://szimek.github.io/signature_pad) works in desktop and mobile browsers. You can check out its [source code](https://github.com/szimek/signature_pad/blob/master/docs/js/app.js) for some tips on how to handle window resize and high DPI screens. You can also find more about the latter in [HTML5 Rocks tutorial](http://www.html5rocks.com/en/tutorials/canvas/hidpi).
 
 ### Other demos
 
@@ -30,8 +30,11 @@ yarn add signature_pad
 
 You can also add it directly to your page using `<script>` tag:
 
+> [!NOTE]
+> Replace `[version]` with the version you want to use.
+
 ```html
-<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@[version]/dist/signature_pad.umd.min.js"></script>
 ```
 
 You can select a different version at [https://www.jsdelivr.com/package/npm/signature_pad](https://www.jsdelivr.com/package/npm/signature_pad).
@@ -56,6 +59,7 @@ signaturePad.toDataURL("image/svg+xml"); // save image as SVG data url
 // Return svg string without converting to base64
 signaturePad.toSVG(); // "<svg...</svg>"
 signaturePad.toSVG({includeBackgroundColor: true}); // add background color to svg output
+signaturePad.toSVG({includeDataUrl: true}); // add data url added with fromDataUrl to svg output background
 
 // Draws signature image from data URL (mostly uses https://mdn.io/drawImage under-the-hood)
 // NOTE: This method does not populate internal data structure that represents drawn signature. Thus, after using #fromDataURL, #toData won't work properly.
@@ -72,6 +76,9 @@ signaturePad.fromData(data);
 
 // Draws signature image from an array of point groups, without clearing your existing image (clear defaults to true if not provided)
 signaturePad.fromData(data, { clear: false });
+
+// Redraw the canvas
+signaturePad.redraw();
 
 // Clears the canvas
 signaturePad.clear();
@@ -173,7 +180,7 @@ Instead of `resize` event you can listen to screen orientation change, if you're
 
 #### Handling canvas resize
 
-When you modify width or height of a canvas, it will be automatically cleared by the browser. SignaturePad doesn't know about it by itself, so you can call `signaturePad.fromData(signaturePad.toData())` to reset the drawing, or `signaturePad.clear()` to make sure that `signaturePad.isEmpty()` returns correct value in this case.
+When you modify width or height of a canvas, it will be automatically cleared by the browser. SignaturePad doesn't know about it by itself, so you can call `signaturePad.redraw()` to reset the drawing, or `signaturePad.clear()` to make sure that `signaturePad.isEmpty()` returns correct value in this case.
 
 This clearing of the canvas by the browser can be annoying, especially on mobile devices e.g. when screen orientation is changed. There are a few workarounds though, e.g. you can [lock screen orientation](https://developer.mozilla.org/en-US/docs/Web/API/Screen/lockOrientation), or read an image from the canvas before resizing it and write the image back after.
 
@@ -189,7 +196,7 @@ You could simply store it in your database as a string and display it in HTML li
 <img src="data:image/png;base64,iVBORw0K..." />
 ```
 
-but this way has many disadvantages - it's not easy to get image dimensions, you can't manipulate it e.g. to create a thumbnail and it also [has some performance issues on mobile devices](http://www.mobify.com/blog/data-uris-are-slow-on-mobile/).
+but this way has many disadvantages - it's not easy to get image dimensions, you can't manipulate it e.g. to create a thumbnail and it also [has some performance issues on mobile devices](https://web.archive.org/web/20160414182912/http://www.mobify.com/blog/data-uris-are-slow-on-mobile).
 
 Thus, more common way is to decode it and store as a file. Here's an example in Ruby:
 

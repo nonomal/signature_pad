@@ -1,10 +1,44 @@
 import SignaturePad from '../src/signature_pad';
+import type { Options, PointGroup } from '../src/signature_pad';
+import type { CanvasRenderingContext2DEvent } from 'jest-canvas-mock';
 import { face } from './fixtures/face';
 import { square } from './fixtures/square';
 import './utils/pointer-event-polyfill';
 
 let canvas: HTMLCanvasElement;
 const dpr = window.devicePixelRatio;
+
+type MockCanvasContext = CanvasRenderingContext2D & {
+  __clearEvents(): void;
+  __clearDrawCalls(): void;
+  __getEvents(): CanvasRenderingContext2DEvent[];
+  __getDrawCalls(): CanvasRenderingContext2DEvent[];
+};
+
+const twoPointLine: PointGroup[] = [
+  {
+    penColor: 'black',
+    dotSize: 0,
+    minWidth: 0.5,
+    maxWidth: 2.5,
+    velocityFilterWeight: 0.7,
+    compositeOperation: 'source-over',
+    points: [
+      {
+        time: 1523730548448,
+        x: 20,
+        y: 30,
+        pressure: 0,
+      },
+      {
+        time: 1523730548657,
+        x: 80,
+        y: 90,
+        pressure: 0,
+      },
+    ],
+  },
+];
 
 function changeDevicePixelratio(ratio: number) {
   window.devicePixelRatio = ratio;
@@ -37,6 +71,91 @@ describe('#constructor', () => {
 
     expect(pad.minDistance).toBe(0);
   });
+
+  it("uses fallback values for options with explicit 'undefined'", () => {
+    const opts: Options = {
+      dotSize: undefined,
+      minWidth: undefined,
+      maxWidth: undefined,
+      penColor: undefined,
+      velocityFilterWeight: undefined,
+      compositeOperation: undefined,
+      minDistance: undefined,
+      backgroundColor: undefined,
+      throttle: undefined,
+      canvasContextOptions: undefined,
+    };
+
+    const exp: Options = {
+      dotSize: 0,
+      minWidth: 0.5,
+      maxWidth: 2.5,
+      penColor: 'black',
+      velocityFilterWeight: 0.7,
+      compositeOperation: 'source-over',
+      minDistance: 5,
+      backgroundColor: 'rgba(0,0,0,0)',
+      throttle: 16,
+      canvasContextOptions: {},
+    };
+
+    const pad = new SignaturePad(canvas, opts);
+
+    const actual = {
+      dotSize: pad.dotSize,
+      minWidth: pad.minWidth,
+      maxWidth: pad.maxWidth,
+      penColor: pad.penColor,
+      velocityFilterWeight: pad.velocityFilterWeight,
+      compositeOperation: pad.compositeOperation,
+      minDistance: pad.minDistance,
+      backgroundColor: pad.backgroundColor,
+      throttle: pad.throttle,
+      canvasContextOptions: pad.canvasContextOptions,
+    };
+
+    expect(actual).toStrictEqual(exp);
+  });
+
+  it('disables user selection and touch actions on the canvas', () => {
+    new SignaturePad(canvas);
+
+    expect(canvas.style.touchAction).toBe('none');
+    expect(canvas.style.userSelect).toBe('none');
+    expect(canvas.style.webkitUserSelect).toBe('none');
+  });
+});
+
+describe('#off', () => {
+  it('resets canvas styles for touch action and user selection', () => {
+    const pad = new SignaturePad(canvas);
+    pad.off();
+
+    expect(canvas.style.touchAction).toBe('auto');
+    expect(canvas.style.userSelect).toBe('auto');
+    expect(canvas.style.webkitUserSelect).toBe('auto');
+  });
+});
+
+describe('#redraw', () => {
+  it('redraws the canvas', () => {
+    const pad = new SignaturePad(canvas);
+    pad.fromData(face);
+    pad.redraw();
+    expect(pad.toDataURL('image/svg+xml')).toMatchSnapshot();
+  });
+
+  it('redraws the dataurl with options', () => {
+    const pad = new SignaturePad(canvas);
+    pad.fromData(face);
+    const dataUrl = pad.toDataURL('image/svg+xml');
+    pad.clear();
+    pad.fromDataURL(dataUrl, { width: 100, height: 100 });
+    pad.redraw();
+    expect(
+      pad.toDataURL('image/svg+xml', { includeDataUrl: true }),
+    ).toMatchSnapshot();
+  });
 });
 
 describe('#clear', () => {
@@ -65,7 +184,7 @@ describe('#clear', () => {
 
     pad.clear();
 
-    const context = canvas.getContext('2d') as CanvasRenderingContext2D;
+    const context = canvas.getContext('2d') as MockCanvasContext;
     expect(context.globalCompositeOperation).toBe('destination-out');
   });
 });
@@ -122,6 +241,49 @@ describe('#fromData', () => {
 
     pad.fromData(face);
     expect(pad.toDataURL('image/svg+xml')).toBe(expected);
+  });
+
+  it('draws point groups with two points', () => {
+    const pad = new SignaturePad(canvas);
+    const context = canvas.getContext('2d') as CanvasRenderingContext2D;
+    context.__clearEvents();
+    context.__clearDrawCalls();
+
+    pad.fromData(twoPointLine);
+
+    const events = context.__getEvents();
+    expect(events).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: 'moveTo', props: { x: 20, y: 30 } }),
+        expect.objectContaining({ type: 'lineTo', props: { x: 80, y: 90 } }),
+        expect.objectContaining({ type: 'lineWidth', props: { value: 3 } }),
+        expect.objectContaining({
+          type: 'lineCap',
+          props: { value: 'round' },
+        }),
+      ]),
+    );
+    const strokeCalls = context
+      .__getDrawCalls()
+      .filter(({ type }) => type === 'stroke');
+    expect(strokeCalls).toHaveLength(1);
+    expect(strokeCalls[0]).toEqual(
+      expect.objectContaining({
+        props: expect.objectContaining({
+          path: expect.arrayContaining([
+            expect.objectContaining({
+              type: 'moveTo',
+              props: { x: 20, y: 30 },
+            }),
+            expect.objectContaining({
+              type: 'lineTo',
+              props: { x: 80, y: 90 },
+            }),
+          ]),
+        }),
+      }),
+    );
+    expect(pad.isEmpty()).toBe(false);
   });
 });
 
@@ -208,6 +370,22 @@ describe('#toSVG', () => {
     expect(pad.toSVG()).toMatchSnapshot();
   });
 
+  it('returns SVG line for point groups with two points', () => {
+    const pad = new SignaturePad(canvas);
+    pad.fromData([{ ...twoPointLine[0], dotSize: 4 }]);
+
+    const svg = new DOMParser().parseFromString(pad.toSVG(), 'image/svg+xml');
+    const line = svg.querySelector('line');
+
+    expect(line?.getAttribute('x1')).toBe('20');
+    expect(line?.getAttribute('y1')).toBe('30');
+    expect(line?.getAttribute('x2')).toBe('80');
+    expect(line?.getAttribute('y2')).toBe('90');
+    expect(line?.getAttribute('stroke')).toBe('black');
+    expect(line?.getAttribute('stroke-width')).toBe('8');
+    expect(line?.getAttribute('stroke-linecap')).toBe('round');
+  });
+
   it('returns SVG image with backgroundColor', () => {
     const pad = new SignaturePad(canvas, { backgroundColor: '#fcc' });
     pad.fromData(face);
@@ -221,6 +399,16 @@ describe('user interactions', () => {
     const pad = new SignaturePad(canvas);
     canvas.dispatchEvent(
       new PointerEvent('pointerdown', {
+        pointerId: 1,
+        clientX: 50,
+        clientY: 30,
+        pressure: 1,
+        buttons: 1,
+      }),
+    );
+    window.dispatchEvent(
+      new PointerEvent('pointerup', {
+        pointerId: 1,
         clientX: 50,
         clientY: 30,
         pressure: 1,
@@ -228,6 +416,16 @@ describe('user interactions', () => {
     );
     canvas.dispatchEvent(
       new PointerEvent('pointerdown', {
+        pointerId: 1,
+        clientX: 240,
+        clientY: 30,
+        pressure: 1,
+        buttons: 1,
+      }),
+    );
+    window.dispatchEvent(
+      new PointerEvent('pointerup', {
+        pointerId: 1,
         clientX: 240,
         clientY: 30,
         pressure: 1,
@@ -235,6 +433,16 @@ describe('user interactions', () => {
     );
     canvas.dispatchEvent(
       new PointerEvent('pointerdown', {
+        pointerId: 1,
+        clientX: 150,
+        clientY: 120,
+        pressure: 1,
+        buttons: 1,
+      }),
+    );
+    window.dispatchEvent(
+      new PointerEvent('pointerup', {
+        pointerId: 1,
         clientX: 150,
         clientY: 120,
         pressure: 1,
@@ -243,26 +451,200 @@ describe('user interactions', () => {
     expect(pad.toDataURL('image/svg+xml')).toMatchSnapshot();
   });
 
+  it('different pointer id events are ignored', () => {
+    const pad = new SignaturePad(canvas);
+    canvas.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        // @ts-expect-error remove pointerId once persistentDeviceId is available
+        persistentDeviceId: 1,
+        pointerId: 1,
+        clientX: 50,
+        clientY: 30,
+        pressure: 1,
+        buttons: 1,
+      }),
+    );
+    canvas.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        // @ts-expect-error remove pointerId once persistentDeviceId is available
+        persistentDeviceId: 2,
+        pointerId: 2,
+        clientX: 240,
+        clientY: 30,
+        pressure: 1,
+        buttons: 1,
+      }),
+    );
+    window.dispatchEvent(
+      new PointerEvent('pointermove', {
+        // @ts-expect-error remove pointerId once persistentDeviceId is available
+        persistentDeviceId: 2,
+        pointerId: 2,
+        clientX: 240,
+        clientY: 40,
+        pressure: 1,
+        buttons: 1,
+      }),
+    );
+    window.dispatchEvent(
+      new PointerEvent('pointermove', {
+        // @ts-expect-error remove pointerId once persistentDeviceId is available
+        persistentDeviceId: 2,
+        pointerId: 2,
+        clientX: 240,
+        clientY: 50,
+        pressure: 1,
+        buttons: 1,
+      }),
+    );
+    window.dispatchEvent(
+      new PointerEvent('pointerup', {
+        // @ts-expect-error remove pointerId once persistentDeviceId is available
+        persistentDeviceId: 2,
+        pointerId: 2,
+        clientX: 240,
+        clientY: 50,
+        pressure: 1,
+      }),
+    );
+    window.dispatchEvent(
+      new PointerEvent('pointermove', {
+        // @ts-expect-error remove pointerId once persistentDeviceId is available
+        persistentDeviceId: 1,
+        pointerId: 1,
+        clientX: 50,
+        clientY: 40,
+        pressure: 1,
+        buttons: 1,
+      }),
+    );
+    window.dispatchEvent(
+      new PointerEvent('pointermove', {
+        // @ts-expect-error remove pointerId once persistentDeviceId is available
+        persistentDeviceId: 1,
+        pointerId: 1,
+        clientX: 50,
+        clientY: 50,
+        pressure: 1,
+        buttons: 1,
+      }),
+    );
+    window.dispatchEvent(
+      new PointerEvent('pointerup', {
+        // @ts-expect-error remove pointerId once persistentDeviceId is available
+        persistentDeviceId: 1,
+        pointerId: 1,
+        clientX: 50,
+        clientY: 50,
+        pressure: 1,
+      }),
+    );
+    expect(pad.toData()[0].points).toMatchObject([
+      { x: 50, y: 30, pressure: 1 },
+      { x: 50, y: 40, pressure: 1 },
+      { x: 50, y: 50, pressure: 1 },
+    ]);
+  });
+
+  it('different pointer id events are respected if sequential', () => {
+    const pad = new SignaturePad(canvas);
+    canvas.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        // @ts-expect-error remove pointerId once persistentDeviceId is available
+        persistentDeviceId: 1,
+        pointerId: 1,
+        isPrimary: true,
+        clientX: 50,
+        clientY: 30,
+        pressure: 1,
+        buttons: 1,
+      }),
+    );
+    window.dispatchEvent(
+      new PointerEvent('pointermove', {
+        // @ts-expect-error remove pointerId once persistentDeviceId is available
+        persistentDeviceId: 1,
+        pointerId: 1,
+        isPrimary: true,
+        clientX: 50,
+        clientY: 30,
+        pressure: 1,
+        buttons: 0,
+      }),
+    );
+
+    canvas.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        // @ts-expect-error remove pointerId once persistentDeviceId is available
+        persistentDeviceId: 2,
+        pointerId: 2,
+        isPrimary: true,
+        clientX: 240,
+        clientY: 30,
+        pressure: 1,
+        buttons: 1,
+      }),
+    );
+
+    window.dispatchEvent(
+      new PointerEvent('pointermove', {
+        // @ts-expect-error remove pointerId once persistentDeviceId is available
+        persistentDeviceId: 2,
+        pointerId: 2,
+        isPrimary: true,
+        clientX: 240,
+        clientY: 40,
+        pressure: 1,
+        buttons: 1,
+      }),
+    );
+
+    window.dispatchEvent(
+      new PointerEvent('pointerup', {
+        // @ts-expect-error remove pointerId once persistentDeviceId is available
+        persistentDeviceId: 2,
+        pointerId: 2,
+        isPrimary: true,
+        clientX: 240,
+        clientY: 50,
+        pressure: 1,
+      }),
+    );
+    expect(pad.toData()[0].points).toMatchObject([
+      { x: 50, y: 30, pressure: 1 },
+    ]);
+    expect(pad.toData()[1].points).toMatchObject([
+      { x: 240, y: 30, pressure: 1 },
+      { x: 240, y: 40, pressure: 1 },
+      { x: 240, y: 50, pressure: 1 },
+    ]);
+  });
+
   it('call endStroke on pointerup outside canvas', () => {
     const pad = new SignaturePad(canvas);
     const endStroke = jest.fn();
     pad.addEventListener('endStroke', endStroke);
     canvas.dispatchEvent(
       new PointerEvent('pointerdown', {
+        pointerId: 1,
         clientX: 50,
         clientY: 30,
         pressure: 1,
+        buttons: 1,
       }),
     );
-    canvas.dispatchEvent(
+    window.dispatchEvent(
       new PointerEvent('pointermove', {
+        pointerId: 1,
         clientX: 240,
         clientY: 30,
         pressure: 1,
+        buttons: 1,
       }),
     );
-    document.dispatchEvent(
+    window.dispatchEvent(
       new PointerEvent('pointerup', {
+        pointerId: 1,
         clientX: 150,
         clientY: 120,
         pressure: 1,
@@ -287,21 +669,26 @@ describe('user interactions', () => {
 
     externalCanvas.dispatchEvent(
       new PointerEvent('pointerdown', {
+        pointerId: 1,
         clientX: 50,
         clientY: 30,
         pressure: 1,
+        buttons: 1,
       }),
     );
     externalCanvas.dispatchEvent(
       new PointerEvent('pointermove', {
+        pointerId: 1,
         clientX: 240,
         clientY: 30,
         pressure: 1,
+        buttons: 1,
       }),
     );
     // check that original document is not affected
-    document.dispatchEvent(
+    window.dispatchEvent(
       new PointerEvent('pointerup', {
+        pointerId: 1,
         clientX: 150,
         clientY: 120,
         pressure: 1,
@@ -311,12 +698,105 @@ describe('user interactions', () => {
     // check that external document emits
     externalDocument.dispatchEvent(
       new PointerEvent('pointerup', {
+        pointerId: 1,
         clientX: 150,
         clientY: 120,
         pressure: 1,
       }),
     );
     expect(endStroke).toHaveBeenCalled();
+  });
+
+  it('calls endStroke on pointercancel', () => {
+    const pad = new SignaturePad(canvas);
+    const endStroke = jest.fn();
+    pad.addEventListener('endStroke', endStroke);
+
+    canvas.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        pointerId: 1,
+        clientX: 50,
+        clientY: 30,
+        pressure: 1,
+        buttons: 1,
+      }),
+    );
+
+    window.dispatchEvent(
+      new PointerEvent('pointercancel', {
+        pointerId: 1,
+        clientX: 60,
+        clientY: 40,
+        pressure: 0,
+        buttons: 0,
+      }),
+    );
+
+    expect(endStroke).toHaveBeenCalled();
+    expect(pad['_drawingStroke']).toBe(false);
+    expect(pad['_strokePointerId']).toBeUndefined();
+  });
+
+  it('allows a new stroke after pointercancel', () => {
+    const pad = new SignaturePad(canvas);
+    const beginStroke = jest.fn();
+    const endStroke = jest.fn();
+    pad.addEventListener('beginStroke', beginStroke);
+    pad.addEventListener('endStroke', endStroke);
+
+    // erster Stroke
+    canvas.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        pointerId: 1,
+        clientX: 50,
+        clientY: 30,
+        pressure: 1,
+        buttons: 1,
+      }),
+    );
+    window.dispatchEvent(
+      new PointerEvent('pointermove', {
+        pointerId: 1,
+        clientX: 60,
+        clientY: 40,
+        pressure: 1,
+        buttons: 1,
+      }),
+    );
+
+    window.dispatchEvent(
+      new PointerEvent('pointercancel', {
+        pointerId: 1,
+        clientX: 60,
+        clientY: 40,
+        pressure: 0,
+        buttons: 0,
+      }),
+    );
+
+    expect(endStroke).toHaveBeenCalledTimes(1);
+
+    canvas.dispatchEvent(
+      new PointerEvent('pointerdown', {
+        pointerId: 2,
+        clientX: 150,
+        clientY: 80,
+        pressure: 1,
+        buttons: 1,
+      }),
+    );
+    window.dispatchEvent(
+      new PointerEvent('pointerup', {
+        pointerId: 2,
+        clientX: 150,
+        clientY: 80,
+        pressure: 0,
+        buttons: 0,
+      }),
+    );
+
+    expect(beginStroke).toHaveBeenCalledTimes(2);
+    expect(endStroke).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -327,43 +807,22 @@ describe(`touch events.`, () => {
     const touchStartEvent = new TouchEvent('touchstart', {
       cancelable,
       targetTouches: [{} as Touch],
-      changedTouches: [
-        {
-          clientX: 50,
-          clientY: 30,
-          force: 1,
-        } as Touch,
-      ],
+      changedTouches: [{ clientX: 50, clientY: 30, force: 1 } as Touch],
     });
     const touchMoveEvent = new TouchEvent('touchmove', {
       cancelable,
-      targetTouches: [
-        {
-          clientX: 55,
-          clientY: 35,
-          force: 1,
-        } as Touch,
-      ],
+      targetTouches: [{} as Touch],
+      changedTouches: [{ clientX: 55, clientY: 35, force: 1 } as Touch],
     });
     const touchEndEvent = new TouchEvent('touchend', {
       cancelable,
-      changedTouches: [
-        {
-          clientX: 55,
-          clientY: 35,
-          force: 1,
-        } as Touch,
-      ],
+      changedTouches: [{ clientX: 55, clientY: 35, force: 1 } as Touch],
     });
     jest.spyOn(touchStartEvent, 'preventDefault');
     jest.spyOn(touchMoveEvent, 'preventDefault');
     jest.spyOn(touchEndEvent, 'preventDefault');
 
-    return {
-      touchStartEvent,
-      touchMoveEvent,
-      touchEndEvent,
-    };
+    return { touchStartEvent, touchMoveEvent, touchEndEvent };
   }
 
   beforeEach(() => {
@@ -376,8 +835,8 @@ describe(`touch events.`, () => {
     const { touchStartEvent, touchMoveEvent, touchEndEvent } =
       createTouchEvents(false);
     canvas.dispatchEvent(touchStartEvent);
-    canvas.dispatchEvent(touchMoveEvent);
-    canvas.dispatchEvent(touchEndEvent);
+    window.dispatchEvent(touchMoveEvent);
+    window.dispatchEvent(touchEndEvent);
 
     expect(touchStartEvent.preventDefault).not.toHaveBeenCalled();
     expect(touchMoveEvent.preventDefault).not.toHaveBeenCalled();
@@ -388,12 +847,74 @@ describe(`touch events.`, () => {
     const { touchStartEvent, touchMoveEvent, touchEndEvent } =
       createTouchEvents(true);
     canvas.dispatchEvent(touchStartEvent);
-    canvas.dispatchEvent(touchMoveEvent);
-    canvas.dispatchEvent(touchEndEvent);
+    window.dispatchEvent(touchMoveEvent);
+    window.dispatchEvent(touchEndEvent);
 
     expect(touchStartEvent.preventDefault).toHaveBeenCalled();
     expect(touchMoveEvent.preventDefault).toHaveBeenCalled();
     expect(touchEndEvent.preventDefault).toHaveBeenCalled();
+  });
+
+  it('calls endStroke on touchcancel', () => {
+    const endStroke = jest.fn();
+    signpad.addEventListener('endStroke', endStroke);
+
+    const touchStartEvent = new TouchEvent('touchstart', {
+      cancelable: true,
+      targetTouches: [{} as Touch],
+      changedTouches: [{ clientX: 50, clientY: 30, force: 1 } as Touch],
+    });
+
+    const touchCancelEvent = new TouchEvent('touchcancel', {
+      cancelable: true,
+      changedTouches: [{ clientX: 60, clientY: 40, force: 0 } as Touch],
+    });
+    jest.spyOn(touchCancelEvent, 'preventDefault');
+
+    canvas.dispatchEvent(touchStartEvent);
+    window.dispatchEvent(touchCancelEvent);
+
+    expect(endStroke).toHaveBeenCalled();
+    expect(touchCancelEvent.preventDefault).toHaveBeenCalled();
+    expect(signpad['_drawingStroke']).toBe(false);
+  });
+
+  it('allows a new stroke after touchcancel', () => {
+    const beginStroke = jest.fn();
+    const endStroke = jest.fn();
+    signpad.addEventListener('beginStroke', beginStroke);
+    signpad.addEventListener('endStroke', endStroke);
+
+    const firstStart = new TouchEvent('touchstart', {
+      cancelable: true,
+      targetTouches: [{} as Touch],
+      changedTouches: [{ clientX: 50, clientY: 30, force: 1 } as Touch],
+    });
+    const firstCancel = new TouchEvent('touchcancel', {
+      cancelable: true,
+      changedTouches: [{ clientX: 55, clientY: 35, force: 0 } as Touch],
+    });
+
+    canvas.dispatchEvent(firstStart);
+    window.dispatchEvent(firstCancel);
+
+    expect(endStroke).toHaveBeenCalledTimes(1);
+
+    const secondStart = new TouchEvent('touchstart', {
+      cancelable: true,
+      targetTouches: [{} as Touch],
+      changedTouches: [{ clientX: 100, clientY: 60, force: 1 } as Touch],
+    });
+    const secondEnd = new TouchEvent('touchend', {
+      cancelable: true,
+      changedTouches: [{ clientX: 100, clientY: 60, force: 0 } as Touch],
+    });
+
+    canvas.dispatchEvent(secondStart);
+    window.dispatchEvent(secondEnd);
+
+    expect(beginStroke).toHaveBeenCalledTimes(2);
+    expect(endStroke).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -428,6 +949,17 @@ describe('Signature events.', () => {
     },
   ].forEach((param) => {
     describe(`${param.eventName}.`, () => {
+      function createPointerEvent(dispatchedEventName: string) {
+        return new PointerEvent(dispatchedEventName, {
+          pointerId: 1,
+          clientX: 50,
+          clientY: 30,
+          pressure: 1,
+          buttons: dispatchedEventName == 'pointerup' ? 0 : 1,
+          bubbles: true,
+        });
+      }
+
       beforeEach(() => {
         signpad.addEventListener(param.eventName, eventHandler);
       });
@@ -441,15 +973,9 @@ describe('Signature events.', () => {
       });
 
       it('writes to the canvas.', () => {
-        const eventInitObj = <PointerEventInit>{
-          clientX: 50,
-          clientY: 30,
-          pressure: 1,
-          bubbles: true,
-        };
         let pointerEvent;
         for (const dispatchedEventName of param.dispatchedEventName) {
-          pointerEvent = new PointerEvent(dispatchedEventName, eventInitObj);
+          pointerEvent = createPointerEvent(dispatchedEventName);
           canvas.dispatchEvent(pointerEvent);
         }
 
@@ -457,7 +983,7 @@ describe('Signature events.', () => {
         expect(eventDispatched).toBeInstanceOf(CustomEvent);
 
         const event = <CustomEvent>eventDispatched;
-        expect(event.detail).toBe(pointerEvent);
+        expect(event.detail.event).toBe(pointerEvent);
       });
     });
   });
@@ -475,9 +1001,11 @@ describe('Signature events.', () => {
 
     it('the event should be dispatched.', () => {
       const eventInitObj = <PointerEventInit>{
+        pointerId: 1,
         clientX: 50,
         clientY: 30,
         pressure: 1,
+        buttons: 1,
       };
       const pointerEvent = new PointerEvent('pointerdown', eventInitObj);
       canvas.dispatchEvent(pointerEvent);
@@ -486,7 +1014,7 @@ describe('Signature events.', () => {
       expect(eventDispatched).toBeInstanceOf(CustomEvent);
 
       const event = <CustomEvent>eventDispatched;
-      expect(event.detail).toBe(pointerEvent);
+      expect(event.detail.event).toBe(pointerEvent);
     });
   });
 
@@ -501,20 +1029,25 @@ describe('Signature events.', () => {
 
     canvas.dispatchEvent(
       new PointerEvent('pointerdown', {
+        pointerId: 1,
         clientX: 50,
         clientY: 30,
         pressure: 1,
+        buttons: 1,
       }),
     );
     canvas.dispatchEvent(
       new PointerEvent('pointermove', {
+        pointerId: 1,
         clientX: 50,
         clientY: 40,
         pressure: 1,
+        buttons: 1,
       }),
     );
-    document.dispatchEvent(
+    window.dispatchEvent(
       new PointerEvent('pointerup', {
+        pointerId: 1,
         clientX: 50,
         clientY: 40,
         pressure: 1,
